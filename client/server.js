@@ -16,10 +16,30 @@ const players = new Map(); // contain player data
 const playerKeys = new Map(); // contain pressed keys of each player
 const playerMouse = new Map(); // mouse pos of each player
 const TICK_RATE = 60;
-const MOVE_SPEED = 5;
+const MOVE_SPEED = 3;
 const TURN_SPEED = 3;
 const CANVAS_DIMENSIONS = { width: 600, height: 400 };
-const SIZE_FACTOR = 0.4;
+const SIZE_FACTOR = 0.2;
+// tank width is 110 x 140
+const TANK_DIMENSIONS = { width: SIZE_FACTOR * 110, height: SIZE_FACTOR * 140 };
+
+const checkRotatedCorners = (x, y, rad) => {
+  const canvasWidth = CANVAS_DIMENSIONS.width;
+  const canvasHeight = CANVAS_DIMENSIONS.height;
+  const hw = TANK_DIMENSIONS.width / 2;
+  const hh = TANK_DIMENSIONS.height / 2;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  const corners = [
+    { x: x + (-hw * cos - -hh * sin), y: y + (-hw * sin + -hh * cos) },
+    { x: x + (hw * cos - -hh * sin), y: y + (hw * sin + -hh * cos) },
+    { x: x + (hw * cos - hh * sin), y: y + (hw * sin + hh * cos) },
+    { x: x + (-hw * cos - hh * sin), y: y + (-hw * sin + hh * cos) },
+  ];
+
+  return !corners.some(c => c.x < 0 || c.x > canvasWidth || c.y < 0 || c.y > canvasHeight);
+}
 
 app.use(express.static(join(__dirname, 'public')));
 
@@ -34,14 +54,14 @@ io.on('connection', (socket) => {
   // new player initialization
   const newPlayer = {
     id: socket.id,
-    x: 500 * players.size,
-    y: 500 * players.size,
+    x: CANVAS_DIMENSIONS.width / 2,
+    y: CANVAS_DIMENSIONS.height / 2,
     bodyAngle: 0,
     barrelAngle: 0
   };
   players.set(socket.id, newPlayer);
   playerKeys.set(socket.id, {});
-  playerMouse.set(socket.id, { x: 0, y: 0});
+  playerMouse.set(socket.id, { x: 0, y: 0 });
 
   // send initial canvas dimensions
   socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR);
@@ -67,18 +87,36 @@ setInterval(() => {
     const angleRad = (player.bodyAngle * Math.PI) / 180;
     // Movement
     if (keys.w) {
-      player.x += MOVE_SPEED * Math.sin(angleRad);
-      player.y -= MOVE_SPEED * Math.cos(angleRad);
+      const newX = player.x + MOVE_SPEED * Math.sin(angleRad);
+      const newY = player.y - MOVE_SPEED * Math.cos(angleRad);
+      if (checkRotatedCorners(newX, newY, angleRad)) {
+        player.x = newX;
+        player.y = newY;
+      }
     }
     if (keys.s) {
-      player.x -= MOVE_SPEED * Math.sin(angleRad);
-      player.y += MOVE_SPEED * Math.cos(angleRad);
+      const newX = player.x - MOVE_SPEED * Math.sin(angleRad);
+      const newY = player.y + MOVE_SPEED * Math.cos(angleRad);
+      if (checkRotatedCorners(newX, newY, angleRad)) {
+        player.x = newX;
+        player.y = newY;
+      }
     }
-    
+
     // Rotation
-    if (keys.a) player.bodyAngle -= TURN_SPEED;
-    if (keys.d) player.bodyAngle += TURN_SPEED;
-    
+    if (keys.a) {
+      const newBodyAngle = player.bodyAngle - TURN_SPEED;
+      if (checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)) {
+        player.bodyAngle = newBodyAngle;
+      }
+    }
+    if (keys.d) {
+      const newBodyAngle = player.bodyAngle + TURN_SPEED;
+      if (checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)) {
+        player.bodyAngle = newBodyAngle;
+      }
+    }
+
     // calculate barrelAngle
     const xDiff = playerMouse.get(id).x - player.x;
     const yDiff = playerMouse.get(id).y - player.y;

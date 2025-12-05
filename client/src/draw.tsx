@@ -2,34 +2,35 @@ function drawTank(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
-    bodyAngle: number,
-    barrelAngle: number
+    bodyAngle: number,    // degrees
+    barrelAngle: number,  // radians (already in radians on server)
+    SIZE_FACTOR: number
 ) {
-    ctx.save();
-    ctx.translate(x, y);
-    // rotate is given in degrees, convert to radians
-    ctx.rotate(bodyAngle * Math.PI / 180);
+    const S = (v: number) => v * SIZE_FACTOR;
 
     // ---------------------
     // BODY + TRACKS
     // ---------------------
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(bodyAngle * Math.PI / 180);
+
     // tracks
     ctx.fillStyle = "#1e5c36";
-    ctx.fillRect(-55, -70, 20, 140); // left track
-    ctx.fillRect(35, -70, 20, 140);  // right track
+    ctx.fillRect(S(-55), S(-70), S(20), S(140)); // left
+    ctx.fillRect(S(35), S(-70), S(20), S(140));  // right
 
-    // tracks stripes
+    // track stripes
     ctx.fillStyle = "#1a4f2f";
     for (let i = -65; i <= 65; i += 14) {
-        ctx.fillRect(-55, i, 20, 8);
-        ctx.fillRect(35, i, 20, 8);
+        ctx.fillRect(S(-55), S(i), S(20), S(8));
+        ctx.fillRect(S(35), S(i), S(20), S(8));
     }
 
-    // hull (rounded rectangle)
-    drawRoundedRect(ctx, -45, -60, 90, 120, 20, "#2cab55");
+    // hull
+    drawRoundedRect(ctx, S(-45), S(-60), S(90), S(120), S(20), "#2cab55");
 
-    ctx.restore(); // body done
-
+    ctx.restore();
 
     // ---------------------
     // TURRET + BARREL
@@ -41,33 +42,33 @@ function drawTank(
     // turret polygon
     ctx.fillStyle = "#1e834c";
     ctx.beginPath();
-    ctx.moveTo(-25, -30);
-    ctx.lineTo(25, -30);
-    ctx.lineTo(40, 0);
-    ctx.lineTo(25, 30);
-    ctx.lineTo(-25, 30);
-    ctx.lineTo(-40, 0);
+    ctx.moveTo(S(-25), S(-30));
+    ctx.lineTo(S(25), S(-30));
+    ctx.lineTo(S(40), S(0));
+    ctx.lineTo(S(25), S(30));
+    ctx.lineTo(S(-25), S(30));
+    ctx.lineTo(S(-40), S(0));
     ctx.closePath();
     ctx.fill();
 
     // turret circular top
     ctx.fillStyle = "#125835";
     ctx.beginPath();
-    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.arc(0, 0, S(22), 0, Math.PI * 2);
     ctx.fill();
 
     // barrel
     ctx.fillStyle = "#1e5c36";
-    ctx.fillRect(22, -6, 60, 12);
+    ctx.fillRect(S(22), S(-6), S(60), S(12));
 
     ctx.restore();
 }
 
-export function drawTanks(ctx: CanvasRenderingContext2D, tanks: Array<any>) {
+export function drawTanks(ctx: CanvasRenderingContext2D, tanks: Array<any>, SIZE_FACTOR: number) {
     console.log("drawing tanks, data: ", tanks);
     tanks.forEach(data => {
         const { x, y, barrelAngle, bodyAngle } = data;
-        drawTank(ctx, x, y, bodyAngle, barrelAngle);
+        drawTank(ctx, x, y, bodyAngle, barrelAngle, SIZE_FACTOR);
     });
 }
 function drawRoundedRect(

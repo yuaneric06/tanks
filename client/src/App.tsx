@@ -19,16 +19,6 @@ function App() {
     const dpr = window.devicePixelRatio || 1;
     let SCALE = dpr * SIZE_FACTOR;
 
-    // const draw = () => {
-    //   ctx.clearRect(0, 0, canvas.width / SIZE_FACTOR, canvas.height / SIZE_FACTOR); // clear previous frame
-    //   ctx.fillStyle = "blue"; // Set the fill color
-
-    //   // continuous movement based on keysPressed
-    //   requestAnimationFrame(draw);
-    // };
-
-    // draw(); // start the animation loop
-
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
       socket.emit("update", keysPressed.current, mousePos.current);
@@ -50,7 +40,7 @@ function App() {
       const canvasX = cssX * (canvas.width / rect.width);
       const canvasY = cssY * (canvas.height / rect.height);
 
-      mousePos.current = { x: canvasX / SCALE, y: canvasY / SCALE};
+      mousePos.current = { x: canvasX / dpr, y: canvasY / dpr};
       socket.emit("update", keysPressed.current, mousePos.current);
     }
 
@@ -62,14 +52,14 @@ function App() {
       canvas.height = CANVAS_DIMENSIONS.height * dpr;
       SIZE_FACTOR = _SIZE_FACTOR;
       SCALE = dpr * SIZE_FACTOR;
-      ctx.scale(SCALE, SCALE);
+      ctx.scale(dpr, dpr);
     });
 
     socket.on("state", (bodyData) => {
       // console.log("update from server, data: ", data);
       ctx.clearRect(0, 0, canvas.width / SCALE, canvas.height / SCALE); // clear previous frame
       ctx.fillStyle = "blue"; // Set the fill color
-      drawTanks(ctx, bodyData);
+      drawTanks(ctx, bodyData, SIZE_FACTOR);
     });
 
     return () => {
