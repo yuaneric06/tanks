@@ -15,13 +15,14 @@ const io = new Server(server);
 const players = new Map(); // contain player data
 const playerKeys = new Map(); // contain pressed keys of each player
 const playerMouse = new Map(); // mouse pos of each player
+const shells = [];
+const CANVAS_DIMENSIONS = { width: 600, height: 400 };
+const SIZE_FACTOR = 0.2;
+const TANK_DIMENSIONS = { width: SIZE_FACTOR * 110, height: SIZE_FACTOR * 140 };
 const TICK_RATE = 60;
 const MOVE_SPEED = 3;
 const TURN_SPEED = 3;
-const CANVAS_DIMENSIONS = { width: 600, height: 400 };
-const SIZE_FACTOR = 0.2;
-// tank width is 110 x 140
-const TANK_DIMENSIONS = { width: SIZE_FACTOR * 110, height: SIZE_FACTOR * 140 };
+const SHELL_SPEED = 5;
 
 const checkRotatedCorners = (x, y, rad) => {
   const canvasWidth = CANVAS_DIMENSIONS.width;
@@ -73,6 +74,11 @@ io.on('connection', (socket) => {
   // send initial canvas dimensions
   socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR);
 
+  socket.on("shoot", () => {
+    const player = players.get(socket.id);
+    shells.push( { x: player.x, y: player.y, angle: player.barrelAngle });
+  });
+
   socket.on("update", (keys, mouse) => {
     // console.log("update from player. data:", keys, " ", mouse);
     playerKeys.set(socket.id, keys);
@@ -89,6 +95,7 @@ io.on('connection', (socket) => {
 });
 
 setInterval(() => {
+  // update player state
   playerKeys.forEach((keys, id) => {
     const player = players.get(id);
     const angleRad = (player.bodyAngle * Math.PI) / 180;
@@ -135,7 +142,15 @@ setInterval(() => {
     player.barrelAngle = Math.atan2(yDiff, xDiff);
   })
 
-  io.emit("state", Array.from(players.values()));
+  // update shells state
+  shells.forEach(data => {
+    const { x, y, angle } = data; // angle is already in radians
+    const newX = x + SHELL_SPEED * Math.cos(angle)
+    const newY = y + SHELL_SPEED * Math.sin(angle);
+    data.x = newX;
+    data.y = newY;
+  })
+  io.emit("state", Array.from(players.values()), shells);
 }, 1000 / TICK_RATE)
 
 server.listen(3000, () => {

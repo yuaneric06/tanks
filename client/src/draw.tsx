@@ -19,6 +19,9 @@ function drawTank(
     ctx.fillStyle = "#1e5c36";
     ctx.fillRect(S(-55), S(-70), S(20), S(140)); // left
     ctx.fillRect(S(35), S(-70), S(20), S(140));  // right
+    // upper left: (-55, -70)
+    // lower right: (55, 70)
+    // total width: S(110), S(140)
 
     // track stripes
     ctx.fillStyle = "#1a4f2f";
@@ -65,11 +68,21 @@ function drawTank(
 }
 
 export function drawTanks(ctx: CanvasRenderingContext2D, tanks: Array<any>, SIZE_FACTOR: number) {
-    console.log("drawing tanks, data: ", tanks);
     tanks.forEach(data => {
         const { x, y, barrelAngle, bodyAngle } = data;
         drawTank(ctx, x, y, bodyAngle, barrelAngle, SIZE_FACTOR);
     });
+}
+
+export function drawShells(ctx: CanvasRenderingContext2D, shells: Array<any>, SIZE_FACTOR: number, SHELL_RADIUS: number) {
+    console.log(shells);
+    shells.forEach(data => {
+        const { x, y } = data;
+        ctx.beginPath();
+        ctx.arc(x, y, SHELL_RADIUS * SIZE_FACTOR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+    })
 }
 function drawRoundedRect(
     ctx: CanvasRenderingContext2D,

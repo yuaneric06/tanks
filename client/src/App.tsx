@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { drawTanks } from './draw.tsx'
+import { drawTanks, drawShells } from './draw.tsx'
 import { io } from 'socket.io-client'
 import './App.css'
 
@@ -20,8 +20,15 @@ function App() {
     let SCALE = dpr * SIZE_FACTOR;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      keysPressed.current[e.key] = true;
-      socket.emit("update", keysPressed.current, mousePos.current);
+      if (e.key == ' ') {
+        e.preventDefault();
+        console.log("shooting");
+        socket.emit("shoot");
+      }
+      else {
+        keysPressed.current[e.key] = true;
+        socket.emit("update", keysPressed.current, mousePos.current);
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -55,11 +62,11 @@ function App() {
       ctx.scale(dpr, dpr);
     });
 
-    socket.on("state", (bodyData) => {
-      // console.log("update from server, data: ", data);
+    socket.on("state", (bodyData, shells) => {
       ctx.clearRect(0, 0, canvas.width / SCALE, canvas.height / SCALE); // clear previous frame
       ctx.fillStyle = "blue"; // Set the fill color
       drawTanks(ctx, bodyData, SIZE_FACTOR);
+      drawShells(ctx, shells, 10, SIZE_FACTOR);
     });
 
     return () => {
