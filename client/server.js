@@ -38,7 +38,14 @@ const checkRotatedCorners = (x, y, rad) => {
     { x: x + (-hw * cos - hh * sin), y: y + (-hw * sin + hh * cos) },
   ];
 
-  return !corners.some(c => c.x < 0 || c.x > canvasWidth || c.y < 0 || c.y > canvasHeight);
+  for (const c of corners) {
+    if (c.x < 0) return { x: 1, y: 0 };
+    else if (c.x > canvasWidth) return { x: -1, y: 0 };
+    else if (c.y < 0) return { x: 0, y: 1 };
+    else if (c.y > canvasHeight) return { x: 0, y: -1 };
+  }
+
+  return { x: 0, y: 0 };
 }
 
 app.use(express.static(join(__dirname, 'public')));
@@ -88,17 +95,21 @@ setInterval(() => {
     // Movement
     if (keys.w) {
       const newX = player.x + MOVE_SPEED * Math.sin(angleRad);
-      const newY = player.y - MOVE_SPEED * Math.cos(angleRad);
-      if (checkRotatedCorners(newX, newY, angleRad)) {
+      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
         player.x = newX;
+      }
+      const newY = player.y - MOVE_SPEED * Math.cos(angleRad);
+      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
         player.y = newY;
       }
     }
     if (keys.s) {
       const newX = player.x - MOVE_SPEED * Math.sin(angleRad);
-      const newY = player.y + MOVE_SPEED * Math.cos(angleRad);
-      if (checkRotatedCorners(newX, newY, angleRad)) {
+      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
         player.x = newX;
+      }
+      const newY = player.y + MOVE_SPEED * Math.cos(angleRad);
+      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
         player.y = newY;
       }
     }
@@ -106,9 +117,10 @@ setInterval(() => {
     // Rotation
     if (keys.a) {
       const newBodyAngle = player.bodyAngle - TURN_SPEED;
-      if (checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)) {
-        player.bodyAngle = newBodyAngle;
-      }
+      const { x, y } = checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)
+      player.bodyAngle = newBodyAngle;
+      player.x += x;
+      player.y += y;
     }
     if (keys.d) {
       const newBodyAngle = player.bodyAngle + TURN_SPEED;
