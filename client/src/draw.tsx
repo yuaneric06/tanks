@@ -1,9 +1,9 @@
-export function drawTank(
+function drawTank(
     ctx: CanvasRenderingContext2D,
     x: number,
     y: number,
     bodyAngle: number,
-    turretAngle: number
+    barrelAngle: number
 ) {
     ctx.save();
     ctx.translate(x, y);
@@ -36,7 +36,7 @@ export function drawTank(
     // ---------------------
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(turretAngle);
+    ctx.rotate(barrelAngle);
 
     // turret polygon
     ctx.fillStyle = "#1e834c";
@@ -63,6 +63,13 @@ export function drawTank(
     ctx.restore();
 }
 
+export function drawTanks(ctx: CanvasRenderingContext2D, tanks: Array<any>) {
+    console.log("drawing tanks, data: ", tanks);
+    tanks.forEach(data => {
+        const { x, y, barrelAngle, bodyAngle } = data;
+        drawTank(ctx, x, y, bodyAngle, barrelAngle);
+    });
+}
 function drawRoundedRect(
     ctx: CanvasRenderingContext2D,
     x: number,

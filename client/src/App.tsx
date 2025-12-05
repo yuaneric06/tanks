@@ -1,92 +1,85 @@
 import { useRef, useEffect } from 'react'
-import { drawTank } from './draw.tsx'
+import { drawTanks } from './draw.tsx'
+import { io } from 'socket.io-client'
 import './App.css'
 
-function App() {
-  const keysPressed = useRef<{ [key: string]: boolean }>({});
-  const canvasRef: any = useRef<HTMLCanvasElement>(null);
-  const playerStatsRef: any = useRef({
-    x: 0,
-    y: 0,
-    bodyAngle: 0,
-    barrelAngle: 0,
-    mouseX: 0,
-    mouseY: 0
-  });
 
-  const sizeFactor = 0.4;
+function App() {
+  const keysPressed = useRef<{ [key: string]: boolean }>(Object.fromEntries(
+    Array.from({ length: 26 }, (_, i) => [String.fromCharCode(97 + i), false])
+  ));
+  const mousePos = useRef({ x: 0, y: 0 });
+  const canvasRef: any = useRef<HTMLCanvasElement>(null);
+  let SIZE_FACTOR = 1;
 
   useEffect(() => {
+    const socket = io("http://localhost:3000");
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
-
-    // properly scale canvas
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr * sizeFactor, dpr * sizeFactor);
+    let SCALE = dpr * SIZE_FACTOR;
 
-    const stats = playerStatsRef.current;
-    const moveSpeed: number = 5;
-    const turnSpeed: number = 3;
+    // const draw = () => {
+    //   ctx.clearRect(0, 0, canvas.width / SIZE_FACTOR, canvas.height / SIZE_FACTOR); // clear previous frame
+    //   ctx.fillStyle = "blue"; // Set the fill color
 
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width / sizeFactor, canvas.height / sizeFactor); // clear previous frame
-      ctx.fillStyle = "blue"; // Set the fill color
-        ctx.fillRect(stats.mouseX, stats.mouseY, 50, 50); // x, y, width, height
-      // continuous movement based on keysPressed
-      if (keysPressed.current["w"]) {
-        // math to calculate movement forward
-        const bodyAngleRadians = stats.bodyAngle * Math.PI / 180;
-        const displacementX: number = moveSpeed * Math.sin(bodyAngleRadians);
-        const displacementY: number = moveSpeed * Math.cos(bodyAngleRadians);
-        stats.x += displacementX;
-        stats.y -= displacementY;
-      }
-      if (keysPressed.current["s"]) {
-        // math to calculate movement backward
-        const bodyAngleRadians = stats.bodyAngle * Math.PI / 180;
-        const displacementX: number = moveSpeed * Math.sin(bodyAngleRadians);
-        const displacementY: number = moveSpeed * Math.cos(bodyAngleRadians);
-        stats.x -= displacementX;
-        stats.y += displacementY;
-      }
-      if (keysPressed.current["a"]) stats.bodyAngle -= turnSpeed;
-      if (keysPressed.current["d"]) stats.bodyAngle += turnSpeed;
+    //   // continuous movement based on keysPressed
+    //   requestAnimationFrame(draw);
+    // };
 
-      const { x, y, bodyAngle, barrelAngle } = playerStatsRef.current;
-      drawTank(ctx, x, y, bodyAngle, barrelAngle);
-      requestAnimationFrame(draw);
-    };
-
-    draw(); // start the animation loop
+    // draw(); // start the animation loop
 
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
+      socket.emit("update", keysPressed.current, mousePos.current);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = false;
+      socket.emit("update", keysPressed.current, mousePos.current);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const stats = playerStatsRef.current;
       const rect = canvasRef.current.getBoundingClientRect();
-      const mouseCanvasX = (e.clientX - rect.left) / sizeFactor - stats.x;
-      const mouseCanvasY = (e.clientY - rect.top) / sizeFactor - stats.y;
-      stats.barrelAngle = mouseCanvasX > 0 ? Math.atan(mouseCanvasY / mouseCanvasX) : Math.atan(mouseCanvasY / mouseCanvasX) + Math.PI;
+
+      // raw mouse -> CSS pixels inside canvas
+      const cssX = e.clientX - rect.left;
+      const cssY = e.clientY - rect.top;
+
+      // convert CSS pixels into canvas coordinate space
+      const canvasX = cssX * (canvas.width / rect.width);
+      const canvasY = cssY * (canvas.height / rect.height);
+
+      mousePos.current = { x: canvasX / SCALE, y: canvasY / SCALE};
+      socket.emit("update", keysPressed.current, mousePos.current);
     }
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("mousemove", handleMouseMove);
+    socket.on("init", (CANVAS_DIMENSIONS, _SIZE_FACTOR) => {
+      canvas.width = CANVAS_DIMENSIONS.width * dpr;
+      canvas.height = CANVAS_DIMENSIONS.height * dpr;
+      SIZE_FACTOR = _SIZE_FACTOR;
+      SCALE = dpr * SIZE_FACTOR;
+      ctx.scale(SCALE, SCALE);
+    });
+
+    socket.on("state", (bodyData) => {
+      // console.log("update from server, data: ", data);
+      ctx.clearRect(0, 0, canvas.width / SCALE, canvas.height / SCALE); // clear previous frame
+      ctx.fillStyle = "blue"; // Set the fill color
+      drawTanks(ctx, bodyData);
+    });
 
     return () => {
+      socket.off("update");
+      socket.disconnect();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("mousemove", handleMouseMove);
     };
+
   }, []);
 
   return (
