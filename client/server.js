@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomColor } from 'randomcolor'
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -12,17 +13,23 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 
+// player data containers
 const players = new Map(); // contain player data
 const playerKeys = new Map(); // contain pressed keys of each player
 const playerMouse = new Map(); // mouse pos of each player
-const shells = [];
+let shells = [];
+
+// canvas data
 const CANVAS_DIMENSIONS = { width: 600, height: 400 };
 const SIZE_FACTOR = 0.2;
 const TANK_DIMENSIONS = { width: SIZE_FACTOR * 110, height: SIZE_FACTOR * 140 };
+
+// game data
 const TICK_RATE = 60;
 const MOVE_SPEED = 3;
 const TURN_SPEED = 3;
 const SHELL_SPEED = 5;
+const SHOT_COOLDOWN = 30;
 
 const checkRotatedCorners = (x, y, rad) => {
   const canvasWidth = CANVAS_DIMENSIONS.width;
@@ -65,19 +72,16 @@ io.on('connection', (socket) => {
     x: CANVAS_DIMENSIONS.width / 2,
     y: CANVAS_DIMENSIONS.height / 2,
     bodyAngle: 0,
-    barrelAngle: 0
+    barrelAngle: 0,
+    shotCooldown: SHOT_COOLDOWN
   };
   players.set(socket.id, newPlayer);
   playerKeys.set(socket.id, {});
   playerMouse.set(socket.id, { x: 0, y: 0 });
 
   // send initial canvas dimensions
-  socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR);
-
-  socket.on("shoot", () => {
-    const player = players.get(socket.id);
-    shells.push( { x: player.x, y: player.y, angle: player.barrelAngle });
-  });
+  console.log(randomColor());
+  socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR, randomColor());
 
   socket.on("update", (keys, mouse) => {
     // console.log("update from player. data:", keys, " ", mouse);
@@ -140,6 +144,17 @@ setInterval(() => {
     const xDiff = playerMouse.get(id).x - player.x;
     const yDiff = playerMouse.get(id).y - player.y;
     player.barrelAngle = Math.atan2(yDiff, xDiff);
+
+    // shooting
+    if (player.shotCooldown < SHOT_COOLDOWN) {
+      player.shotCooldown++;
+    }
+    // console.log(keys);
+
+    if (keys[" "] && player.shotCooldown >= SHOT_COOLDOWN) {
+      player.shotCooldown = 0;
+      shells.push({ x: player.x, y: player.y, angle: player.barrelAngle });
+    }
   })
 
   // update shells state
@@ -150,6 +165,10 @@ setInterval(() => {
     data.x = newX;
     data.y = newY;
   })
+  shells = shells.filter(data => {
+    return data.x >= 0 && data.x < CANVAS_DIMENSIONS.width && data.y >= 0 && data.y < CANVAS_DIMENSIONS.height;
+  })
+
   io.emit("state", Array.from(players.values()), shells);
 }, 1000 / TICK_RATE)
 

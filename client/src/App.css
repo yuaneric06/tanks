@@ -1,12 +1,24 @@
-.title {
+.main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: blue;
+}
+
+h1,
+p {
   text-align: center;
 }
 
 .battlefield {
-  width: 80%;
-  height: 50%;
   border: solid black;
   border-radius: 10px;
   display: block;
   margin: 0 auto;
+}
+
+.color {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

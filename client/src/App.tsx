@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { drawTanks, drawShells } from './draw.tsx'
 import { io } from 'socket.io-client'
 import './App.css'
@@ -10,6 +10,7 @@ function App() {
   ));
   const mousePos = useRef({ x: 0, y: 0 });
   const canvasRef: any = useRef<HTMLCanvasElement>(null);
+  const [playerColor, setPlayerColor] = useState("#FF5733");
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
@@ -20,15 +21,8 @@ function App() {
     let SCALE = dpr * SIZE_FACTOR;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key == ' ') {
-        e.preventDefault();
-        console.log("shooting");
-        socket.emit("shoot");
-      }
-      else {
-        keysPressed.current[e.key] = true;
-        socket.emit("update", keysPressed.current, mousePos.current);
-      }
+      keysPressed.current[e.key] = true;
+      socket.emit("update", keysPressed.current, mousePos.current);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -47,18 +41,21 @@ function App() {
       const canvasX = cssX * (canvas.width / rect.width);
       const canvasY = cssY * (canvas.height / rect.height);
 
-      mousePos.current = { x: canvasX / dpr, y: canvasY / dpr};
+      mousePos.current = { x: canvasX / dpr, y: canvasY / dpr };
       socket.emit("update", keysPressed.current, mousePos.current);
     }
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("mousemove", handleMouseMove);
-    socket.on("init", (CANVAS_DIMENSIONS, _SIZE_FACTOR) => {
+    socket.on("init", (CANVAS_DIMENSIONS, _SIZE_FACTOR, PLAYER_COLOR) => {
+      console.log("initialized");
       canvas.width = CANVAS_DIMENSIONS.width * dpr;
       canvas.height = CANVAS_DIMENSIONS.height * dpr;
       SIZE_FACTOR = _SIZE_FACTOR;
       SCALE = dpr * SIZE_FACTOR;
+      setPlayerColor(PLAYER_COLOR);
+      console.log("player color: ", playerColor);
       ctx.scale(dpr, dpr);
     });
 
@@ -82,7 +79,11 @@ function App() {
   return (
     <main>
       <h1 className="title">Tanks</h1>
-
+      <p>Control your tank, shoot the enemy! WASD to move, mouse to aim, and space to shoot</p>
+      <div className="color">
+        <p>Your tank color: </p>
+        <span style={{ display: "block", backgroundColor: playerColor, width: "50px", height: "1rem" }} />
+      </div>
       <canvas ref={canvasRef} className="battlefield" tabIndex={0} />
 
     </main>

@@ -75,7 +75,6 @@ export function drawTanks(ctx: CanvasRenderingContext2D, tanks: Array<any>, SIZE
 }
 
 export function drawShells(ctx: CanvasRenderingContext2D, shells: Array<any>, SIZE_FACTOR: number, SHELL_RADIUS: number) {
-    console.log(shells);
     shells.forEach(data => {
         const { x, y } = data;
         ctx.beginPath();
