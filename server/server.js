@@ -5,13 +5,19 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomColor } from 'randomcolor'
+import { checkRotatedCorners, pointInRotatedRect } from '../client/calculations.js'
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"]
+  }
+});
 
 // player data containers
 const players = new Map(); // contain player data
@@ -31,36 +37,23 @@ const TURN_SPEED = 3;
 const SHELL_SPEED = 5;
 const SHOT_COOLDOWN = 30;
 
-const checkRotatedCorners = (x, y, rad) => {
-  const canvasWidth = CANVAS_DIMENSIONS.width;
-  const canvasHeight = CANVAS_DIMENSIONS.height;
-  const hw = TANK_DIMENSIONS.width / 2;
-  const hh = TANK_DIMENSIONS.height / 2;
-  const cos = Math.cos(rad);
-  const sin = Math.sin(rad);
+const TOTAL_HEALTH = 1;
+const PLAYER_WIDTH = 110; // make sure to scale by SIZE_FACTOR
+const PLAYER_HEIGHT = 140;
 
-  const corners = [
-    { x: x + (-hw * cos - -hh * sin), y: y + (-hw * sin + -hh * cos) },
-    { x: x + (hw * cos - -hh * sin), y: y + (hw * sin + -hh * cos) },
-    { x: x + (hw * cos - hh * sin), y: y + (hw * sin + hh * cos) },
-    { x: x + (-hw * cos - hh * sin), y: y + (-hw * sin + hh * cos) },
-  ];
+const deadPlayers = new Set();
 
-  for (const c of corners) {
-    if (c.x < 0) return { x: 1, y: 0 };
-    else if (c.x > canvasWidth) return { x: -1, y: 0 };
-    else if (c.y < 0) return { x: 0, y: 1 };
-    else if (c.y > canvasHeight) return { x: 0, y: -1 };
-  }
-
-  return { x: 0, y: 0 };
+const deleteID = (id) => {
+  players.delete(id);
+  playerKeys.delete(id);
+  playerMouse.delete(id);
 }
 
 app.use(express.static(join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-  res.sendFile(join(__dirname, 'public/index.html'));
-});
+// app.get('/', (req, res) => {
+//   res.sendFile(join(__dirname, '../client/public/index.html'));
+// });
 
 io.on('connection', (socket) => {
   console.log('a user connected, total players: ', players.size + 1);
@@ -73,7 +66,9 @@ io.on('connection', (socket) => {
     y: CANVAS_DIMENSIONS.height / 2,
     bodyAngle: 0,
     barrelAngle: 0,
-    shotCooldown: SHOT_COOLDOWN
+    shotCooldown: SHOT_COOLDOWN,
+    health: TOTAL_HEALTH,
+    tankColor: randomColor()
   };
   players.set(socket.id, newPlayer);
   playerKeys.set(socket.id, {});
@@ -81,7 +76,7 @@ io.on('connection', (socket) => {
 
   // send initial canvas dimensions
   console.log(randomColor());
-  socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR, randomColor());
+  socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR, newPlayer.tankColor);
 
   socket.on("update", (keys, mouse) => {
     // console.log("update from player. data:", keys, " ", mouse);
@@ -101,26 +96,27 @@ io.on('connection', (socket) => {
 setInterval(() => {
   // update player state
   playerKeys.forEach((keys, id) => {
+    if (deadPlayers.has(id)) return;
     const player = players.get(id);
     const angleRad = (player.bodyAngle * Math.PI) / 180;
     // Movement
     if (keys.w) {
       const newX = player.x + MOVE_SPEED * Math.sin(angleRad);
-      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
+      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad, CANVAS_DIMENSIONS, TANK_DIMENSIONS)) == JSON.stringify({ x: 0, y: 0 })) {
         player.x = newX;
       }
       const newY = player.y - MOVE_SPEED * Math.cos(angleRad);
-      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
+      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad, CANVAS_DIMENSIONS, TANK_DIMENSIONS)) == JSON.stringify({ x: 0, y: 0 })) {
         player.y = newY;
       }
     }
     if (keys.s) {
       const newX = player.x - MOVE_SPEED * Math.sin(angleRad);
-      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
+      if (JSON.stringify(checkRotatedCorners(newX, player.y, angleRad, CANVAS_DIMENSIONS, TANK_DIMENSIONS)) == JSON.stringify({ x: 0, y: 0 })) {
         player.x = newX;
       }
       const newY = player.y + MOVE_SPEED * Math.cos(angleRad);
-      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad)) == JSON.stringify({ x: 0, y: 0 })) {
+      if (JSON.stringify(checkRotatedCorners(player.x, newY, angleRad, CANVAS_DIMENSIONS, TANK_DIMENSIONS)) == JSON.stringify({ x: 0, y: 0 })) {
         player.y = newY;
       }
     }
@@ -128,14 +124,14 @@ setInterval(() => {
     // Rotation
     if (keys.a) {
       const newBodyAngle = player.bodyAngle - TURN_SPEED;
-      const { x, y } = checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)
+      const { x, y } = checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180, CANVAS_DIMENSIONS, TANK_DIMENSIONS)
       player.bodyAngle = newBodyAngle;
       player.x += x;
       player.y += y;
     }
     if (keys.d) {
       const newBodyAngle = player.bodyAngle + TURN_SPEED;
-      if (checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180)) {
+      if (checkRotatedCorners(player.x, player.y, (newBodyAngle * Math.PI) / 180, CANVAS_DIMENSIONS, TANK_DIMENSIONS)) {
         player.bodyAngle = newBodyAngle;
       }
     }
@@ -153,18 +149,33 @@ setInterval(() => {
 
     if (keys[" "] && player.shotCooldown >= SHOT_COOLDOWN) {
       player.shotCooldown = 0;
-      shells.push({ x: player.x, y: player.y, angle: player.barrelAngle });
+      shells.push({ x: player.x, y: player.y, angle: player.barrelAngle, shotFrom: player.id });
     }
   })
 
   // update shells state
-  shells.forEach(data => {
-    const { x, y, angle } = data; // angle is already in radians
+  shells.forEach(shell => {
+    const { x, y, angle } = shell; // angle is already in radians
     const newX = x + SHELL_SPEED * Math.cos(angle)
     const newY = y + SHELL_SPEED * Math.sin(angle);
-    data.x = newX;
-    data.y = newY;
+    shell.x = newX;
+    shell.y = newY;
+    players.forEach((player, id) => {
+      if (pointInRotatedRect(shell.x,
+        shell.y,
+        player.x,
+        player.y,
+        player.bodyAngle,
+        PLAYER_WIDTH * SIZE_FACTOR,
+        PLAYER_HEIGHT * SIZE_FACTOR) &&
+        shell.shotFrom != player.id) {
+        console.log("hit");
+        deadPlayers.add(id);
+        deleteID(id);
+      }
+    })
   })
+
   shells = shells.filter(data => {
     return data.x >= 0 && data.x < CANVAS_DIMENSIONS.width && data.y >= 0 && data.y < CANVAS_DIMENSIONS.height;
   })
@@ -175,27 +186,3 @@ setInterval(() => {
 server.listen(3000, () => {
   console.log('server running at http://localhost:3000');
 });
-
-/*
-
-      if (keysPressed.current["w"]) {
-        // math to calculate movement forward
-        const bodyAngleRadians = stats.bodyAngle * Math.PI / 180;
-        const displacementX: number = moveSpeed * Math.sin(bodyAngleRadians);
-        const displacementY: number = moveSpeed * Math.cos(bodyAngleRadians);
-        stats.x += displacementX;
-        stats.y -= displacementY;
-      }
-      if (keysPressed.current["s"]) {
-        // math to calculate movement backward
-        const bodyAngleRadians = stats.bodyAngle * Math.PI / 180;
-        const displacementX: number = moveSpeed * Math.sin(bodyAngleRadians);
-        const displacementY: number = moveSpeed * Math.cos(bodyAngleRadians);
-        stats.x -= displacementX;
-        stats.y += displacementY;
-      }
-
-
-      if (keysPressed.current["a"]) stats.bodyAngle -= turnSpeed;
-      if (keysPressed.current["d"]) stats.bodyAngle += turnSpeed;
-*/
