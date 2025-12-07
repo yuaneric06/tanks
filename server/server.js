@@ -14,7 +14,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "https://yuaneric06.github.io/tanks/",
+    origin: "https://yuaneric06.github.io",
     methods: ["GET", "POST"]
   }
 });
