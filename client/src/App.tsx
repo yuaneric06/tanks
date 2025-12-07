@@ -14,7 +14,7 @@ function App() {
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
-    const socket = io("http://localhost:3000");
+    const socket = io("https://tanks-jva2.onrender.com/");
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     const dpr = window.devicePixelRatio || 1;

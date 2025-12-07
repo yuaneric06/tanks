@@ -14,7 +14,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://yuaneric06.github.io/tanks/",
     methods: ["GET", "POST"]
   }
 });
@@ -183,6 +183,10 @@ setInterval(() => {
   io.emit("state", Array.from(players.values()), shells);
 }, 1000 / TICK_RATE)
 
-server.listen(3000, () => {
-  console.log('server running at http://localhost:3000');
+
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  const url = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  console.log(`Server running at ${url}`);
 });
