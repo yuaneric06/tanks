@@ -57,7 +57,7 @@ console.log("enable invincibility password: " + enableInvincibilityPass);
 
 io.on('connection', (socket) => {
   bozoCounter++;
-
+  console.log("user connected, socket id: ", socket.id)
   // new player initialization
   const newPlayer = {
     id: socket.id,
@@ -92,6 +92,7 @@ io.on('connection', (socket) => {
 
   socket.on("disconnect", (reason) => {
     socket.broadcast.emit("playerLeft");
+    console.log("user left, socket id: ", socket.id);
     players.delete(socket.id);
     playerKeys.delete(socket.id);
     playerMouse.delete(socket.id);
