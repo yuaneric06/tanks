@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomColor } from 'randomcolor'
 import { checkRotatedCorners, pointInRotatedRect } from './calculations.js'
+import codes from './cheat-codes.js'
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -50,8 +51,8 @@ app.use(express.static(join(__dirname, 'public')));
 // const generateRandomString = (length) => {
 //   return Math.random().toString(36).substring(2, 2 + length);
 // };
-const disableShellCooldownPass = "yuanshoot";
-const enableInvincibilityPass = "yuaninvincibility";
+const disableShellCooldownPass = codes.shoot;
+const enableInvincibilityPass = codes.health;
 console.log("disable shell cooldown password: " + disableShellCooldownPass);
 console.log("enable invincibility password: " + enableInvincibilityPass);
 

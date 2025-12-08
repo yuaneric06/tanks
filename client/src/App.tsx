@@ -180,7 +180,6 @@ function App() {
       <li className="leaderboard-entry" key={idx}>{entry[1]}, score: {entry[0]}</li>
     )
   })
-  console.log(leaderboard);
 
   return (
     <main>
