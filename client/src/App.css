@@ -30,3 +30,9 @@ p {
   align-items: center;
   justify-content: center;
 }
+
+.respawn-button {
+  width: 100px;
+  height: 50px;
+  margin: 20px auto;
+}

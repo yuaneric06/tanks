@@ -14,8 +14,8 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    // origin: "http://localhost:5173",
-    origin: "https://yuaneric06.github.io",
+    origin: "http://localhost:5173",
+    // origin: "https://yuaneric06.github.io",
     methods: ["GET", "POST"]
   }
 });
@@ -47,13 +47,15 @@ const playersWithNoShellCooldown = new Set();
 
 app.use(express.static(join(__dirname, 'public')));
 
-// app.get('/', (req, res) => {
-//   res.sendFile(join(__dirname, '../client/public/index.html'));
-// });
+const generateRandomString = (length) => {
+  return Math.random().toString(36).substring(2, 2 + length);
+};
+const disableShellCooldownPass = generateRandomString(10);
+const enableInvincibilityPass = generateRandomString(10);
+console.log("disable shell cooldown password: " + disableShellCooldownPass);
+console.log("enable invincibility password: " + enableInvincibilityPass);
 
 io.on('connection', (socket) => {
-  console.log('a user connected, total players: ', players.size + 1);
-  console.log(socket.id);
   bozoCounter++;
 
   // new player initialization
@@ -73,11 +75,9 @@ io.on('connection', (socket) => {
   playerMouse.set(socket.id, { x: 0, y: 0 });
 
   // send initial canvas dimensions
-  console.log(randomColor());
   socket.emit("init", CANVAS_DIMENSIONS, SIZE_FACTOR, newPlayer.tankColor);
 
   socket.on("update", (keys, mouse) => {
-    // console.log("update from player. data:", keys, " ", mouse);
     playerKeys.set(socket.id, keys);
     playerMouse.set(socket.id, mouse);
   });
@@ -95,12 +95,15 @@ io.on('connection', (socket) => {
     players.delete(socket.id);
     playerKeys.delete(socket.id);
     playerMouse.delete(socket.id);
-    console.log("a user disconnected, total players: ", players.size);
   });
 
-  socket.on("disableShellCooldown", () => {
+  // cheats
+  socket.on(disableShellCooldownPass, () => {
     playersWithNoShellCooldown.add(socket.id);
-  })
+  });
+  socket.on(enableInvincibilityPass, () => {
+    players.get(socket.id).health = 999;
+  });
 });
 
 setInterval(() => {
@@ -154,7 +157,6 @@ setInterval(() => {
     if (player.shotCooldown < SHOT_COOLDOWN) {
       player.shotCooldown++;
     }
-    // console.log(keys);
 
     if (keys[" "] && player.health > 0 && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
       player.shotCooldown = 0;
@@ -180,10 +182,8 @@ setInterval(() => {
         PLAYER_WIDTH * SIZE_FACTOR,
         PLAYER_HEIGHT * SIZE_FACTOR) &&
         shell.shotFrom != player.id) {
-        console.log("hit");
         player.health--;
         if (player.health == 0) {
-          console.log("player ", id, " died");
           io.to(id).emit("death");
         }
         shellsToRemove.push(i);

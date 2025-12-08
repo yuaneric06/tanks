@@ -17,8 +17,8 @@ function App() {
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
-    // socketRef.current = io("http://localhost:3000");
-    socketRef.current = io("https://tanks-jva2.onrender.com/");
+    socketRef.current = io("http://localhost:3000");
+    // socketRef.current = io("https://tanks-jva2.onrender.com/");
     const socket = socketRef.current;
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
@@ -67,9 +67,7 @@ function App() {
     };
 
     const goobers = (pass: string) => {
-      if (pass === "yuanShoot") {
-        socket.emit("disableShellCooldown");
-      }
+      socket.emit(pass);
     }
     (window as any).goobers = goobers;
 
@@ -164,12 +162,12 @@ function App() {
         </div>
         <form className="name" onSubmit={handleChangeName}>
           <label>Change your name: </label>
-          <input type="text" placeholder="cheeze gunk" />
+          <input type="text" placeholder="Your name" />
           <button>Submit</button>
         </form>
       </div>
       <canvas ref={canvasRef} className="battlefield" tabIndex={0} />
-      {isDead && <button onClick={() => {
+      {isDead && <button className="respawn-button" onClick={() => {
         setIsDead(false);
         const socket = socketRef.current;
         socket.emit("respawn");
