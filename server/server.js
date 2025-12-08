@@ -47,11 +47,11 @@ const playersWithNoShellCooldown = new Set();
 
 app.use(express.static(join(__dirname, 'public')));
 
-const generateRandomString = (length) => {
-  return Math.random().toString(36).substring(2, 2 + length);
-};
-const disableShellCooldownPass = generateRandomString(10);
-const enableInvincibilityPass = generateRandomString(10);
+// const generateRandomString = (length) => {
+//   return Math.random().toString(36).substring(2, 2 + length);
+// };
+const disableShellCooldownPass = "ericyuanisamazing";
+const enableInvincibilityPass = "ericiscool";
 console.log("disable shell cooldown password: " + disableShellCooldownPass);
 console.log("enable invincibility password: " + enableInvincibilityPass);
 
@@ -61,8 +61,8 @@ io.on('connection', (socket) => {
   // new player initialization
   const newPlayer = {
     id: socket.id,
-    x: CANVAS_DIMENSIONS.width / 2,
-    y: CANVAS_DIMENSIONS.height / 2,
+    x: PLAYER_WIDTH / 2 + Math.random() * (CANVAS_DIMENSIONS.width - PLAYER_WIDTH),
+    y: PLAYER_HEIGHT / 2 + Math.random() * (CANVAS_DIMENSIONS.height - PLAYER_HEIGHT),
     bodyAngle: 0,
     barrelAngle: 0,
     shotCooldown: SHOT_COOLDOWN,
