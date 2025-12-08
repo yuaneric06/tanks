@@ -1,8 +1,7 @@
-.main {
+main {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: blue;
 }
 
 h1,
@@ -15,6 +14,15 @@ p {
   border-radius: 10px;
   display: block;
   margin: 0 auto;
+  width: 40vw;
+  height: 50vh;
+}
+
+.colorAndName {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
 }
 
 .color {

@@ -5,7 +5,7 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomColor } from 'randomcolor'
-import { checkRotatedCorners, pointInRotatedRect } from '../client/calculations.js'
+import { checkRotatedCorners, pointInRotatedRect } from './calculations.js'
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -14,7 +14,7 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "https://yuaneric06.github.io",
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"]
   }
 });
@@ -37,17 +37,12 @@ const TURN_SPEED = 3;
 const SHELL_SPEED = 5;
 const SHOT_COOLDOWN = 30;
 
-const TOTAL_HEALTH = 1;
+const TOTAL_HEALTH = 5;
 const PLAYER_WIDTH = 110; // make sure to scale by SIZE_FACTOR
 const PLAYER_HEIGHT = 140;
 
-const deadPlayers = new Set();
-
-const deleteID = (id) => {
-  players.delete(id);
-  playerKeys.delete(id);
-  playerMouse.delete(id);
-}
+let bozoCounter = 0;
+const playersWithNoShellCooldown = new Set();
 
 app.use(express.static(join(__dirname, 'public')));
 
@@ -58,6 +53,7 @@ app.use(express.static(join(__dirname, 'public')));
 io.on('connection', (socket) => {
   console.log('a user connected, total players: ', players.size + 1);
   console.log(socket.id);
+  bozoCounter++;
 
   // new player initialization
   const newPlayer = {
@@ -68,7 +64,8 @@ io.on('connection', (socket) => {
     barrelAngle: 0,
     shotCooldown: SHOT_COOLDOWN,
     health: TOTAL_HEALTH,
-    tankColor: randomColor()
+    tankColor: randomColor(),
+    name: `bozo #${bozoCounter}`
   };
   players.set(socket.id, newPlayer);
   playerKeys.set(socket.id, {});
@@ -84,6 +81,14 @@ io.on('connection', (socket) => {
     playerMouse.set(socket.id, mouse);
   });
 
+  socket.on("respawn", () => {
+    players.get(socket.id).health = TOTAL_HEALTH;
+  });
+
+  socket.on("nameChange", (newName) => {
+    players.get(socket.id).name = newName;
+  })
+
   socket.on("disconnect", (reason) => {
     socket.broadcast.emit("playerLeft");
     players.delete(socket.id);
@@ -91,12 +96,15 @@ io.on('connection', (socket) => {
     playerMouse.delete(socket.id);
     console.log("a user disconnected, total players: ", players.size);
   });
+
+  socket.on("disableShellCooldown", () => {
+    playersWithNoShellCooldown.add(socket.id);
+  })
 });
 
 setInterval(() => {
   // update player state
   playerKeys.forEach((keys, id) => {
-    if (deadPlayers.has(id)) return;
     const player = players.get(id);
     const angleRad = (player.bodyAngle * Math.PI) / 180;
     // Movement
@@ -147,21 +155,23 @@ setInterval(() => {
     }
     // console.log(keys);
 
-    if (keys[" "] && player.shotCooldown >= SHOT_COOLDOWN) {
+    if (keys[" "] && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
       player.shotCooldown = 0;
       shells.push({ x: player.x, y: player.y, angle: player.barrelAngle, shotFrom: player.id });
     }
   })
 
   // update shells state
-  shells.forEach(shell => {
+  const shellsToRemove = [];
+  for (let i = shells.length - 1; i >= 0; i--) {
+    const shell = shells[i];
     const { x, y, angle } = shell; // angle is already in radians
     const newX = x + SHELL_SPEED * Math.cos(angle)
     const newY = y + SHELL_SPEED * Math.sin(angle);
     shell.x = newX;
     shell.y = newY;
     players.forEach((player, id) => {
-      if (pointInRotatedRect(shell.x,
+      if (player.health > 0 && pointInRotatedRect(shell.x,
         shell.y,
         player.x,
         player.y,
@@ -170,14 +180,18 @@ setInterval(() => {
         PLAYER_HEIGHT * SIZE_FACTOR) &&
         shell.shotFrom != player.id) {
         console.log("hit");
-        deadPlayers.add(id);
-        deleteID(id);
+        player.health--;
+        if (player.health == 0) {
+          console.log("player ", id, " died");
+          io.to(id).emit("death");
+        }
+        shellsToRemove.push(i);
       }
     })
-  })
+  }
 
-  shells = shells.filter(data => {
-    return data.x >= 0 && data.x < CANVAS_DIMENSIONS.width && data.y >= 0 && data.y < CANVAS_DIMENSIONS.height;
+  shells = shells.filter((data, idx) => {
+    return data.x >= 0 && data.x < CANVAS_DIMENSIONS.width && data.y >= 0 && data.y < CANVAS_DIMENSIONS.height && !shellsToRemove.includes(idx);
   })
 
   io.emit("state", Array.from(players.values()), shells);
