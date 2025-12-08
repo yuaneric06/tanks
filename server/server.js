@@ -50,8 +50,8 @@ app.use(express.static(join(__dirname, 'public')));
 // const generateRandomString = (length) => {
 //   return Math.random().toString(36).substring(2, 2 + length);
 // };
-const disableShellCooldownPass = "ericyuanisamazing";
-const enableInvincibilityPass = "ericiscool";
+const disableShellCooldownPass = "yuanshoot";
+const enableInvincibilityPass = "yuaninvincibility";
 console.log("disable shell cooldown password: " + disableShellCooldownPass);
 console.log("enable invincibility password: " + enableInvincibilityPass);
 
@@ -68,7 +68,9 @@ io.on('connection', (socket) => {
     shotCooldown: SHOT_COOLDOWN,
     health: TOTAL_HEALTH,
     tankColor: randomColor(),
-    name: `bozo #${bozoCounter}`
+    name: `bozo #${bozoCounter}`,
+    playersKilled: 0,
+    deaths: 0
   };
   players.set(socket.id, newPlayer);
   playerKeys.set(socket.id, {});
@@ -185,6 +187,8 @@ setInterval(() => {
         shell.shotFrom != player.id) {
         player.health--;
         if (player.health == 0) {
+          player.deaths++;
+          players.get(shell.shotFrom).playersKilled++;
           io.to(id).emit("death");
         }
         shellsToRemove.push(i);

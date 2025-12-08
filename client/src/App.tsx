@@ -14,6 +14,7 @@ function App() {
   const [playerColor, setPlayerColor] = useState("#FF5733");
   const [connected, setConnected] = useState(false);
   const [isDead, setIsDead] = useState(false);
+  const [leaderboard, setLeaderboard] = useState(Array<[number, string]>);
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
@@ -91,6 +92,27 @@ function App() {
     });
 
     socket.on("state", (bodyData: any, shells: any) => {
+      // update leaderboard
+      const tempLeaderboard: Array<[number, string]> = [];
+      bodyData.forEach((player: {
+        id: string;
+        x: number;
+        y: number;
+        bodyAngle: number;
+        barrelAngle: number;
+        shotCooldown: number;
+        health: number;
+        tankColor: string;
+        name: string;
+        playersKilled: number;
+        deaths: number;
+      }) => {
+        const score = player.playersKilled - player.deaths;
+        tempLeaderboard.push([score, player.name]);
+      });
+      tempLeaderboard.sort((a, b) => b[0] - a[0]);
+      setLeaderboard(tempLeaderboard);
+
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, canvas.width, canvas.height); // clear previous frame
@@ -104,6 +126,9 @@ function App() {
         shotCooldown: number;
         health: number;
         tankColor: string;
+        name: string;
+        playersKilled: number;
+        deaths: number;
       }) => player.health > 0);
       drawTanks(ctx, bodyData, SIZE_FACTOR);
       drawShells(ctx, shells, 10, SIZE_FACTOR);
@@ -150,6 +175,13 @@ function App() {
     input.value = "";
   };
 
+  const leaderboardEntries = leaderboard.map((entry, idx) => {
+    return (
+      <li className="leaderboard-entry" key={idx}>{entry[1]}, score: {entry[0]}</li>
+    )
+  })
+  console.log(leaderboard);
+
   return (
     <main>
       {!connected && renderLoadingScreen()}
@@ -172,6 +204,12 @@ function App() {
         const socket = socketRef.current;
         socket.emit("respawn");
       }}>Respawn</button>}
+      <div className="leaderboard">
+        <h2>Leaderboard (score = total kills - total deaths)</h2>
+        <ul className="leaderboard-list">
+          {leaderboardEntries}
+        </ul>
+      </div>
     </main>
   )
 }
