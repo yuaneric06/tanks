@@ -156,7 +156,7 @@ setInterval(() => {
     }
     // console.log(keys);
 
-    if (keys[" "] && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
+    if (keys[" "] && player.health > 0 && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
       player.shotCooldown = 0;
       shells.push({ x: player.x, y: player.y, angle: player.barrelAngle, shotFrom: player.id });
     }
