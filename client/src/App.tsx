@@ -17,11 +17,9 @@ function App() {
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:3000");
-    // socketRef.current = io("https://tanks-jva2.onrender.com/");
+    // socketRef.current = io("http://localhost:3000");
+    socketRef.current = io("https://tanks-jva2.onrender.com/");
     const socket = socketRef.current;
-    const dpr = window.devicePixelRatio || 1;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
       socket.emit("update", keysPressed.current, mousePos.current);
