@@ -103,9 +103,11 @@ io.on('connection', (socket) => {
 
   // cheats
   socket.on(disableShellCooldownPass, () => {
+    io.to(socket.id).emit("cheatEnabled", "disabled shell cooldown");
     playersWithNoShellCooldown.add(socket.id);
   });
   socket.on(enableInvincibilityPass, () => {
+    io.to(socket.id).emit("cheatEnabled", "health set to 999");
     players.get(socket.id).health = 999;
   });
 });

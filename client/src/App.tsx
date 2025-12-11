@@ -21,6 +21,7 @@ function App() {
     // socketRef.current = io("http://localhost:3000");
     socketRef.current = io("https://tanks-jva2.onrender.com/");
     const socket = socketRef.current;
+    const canvas = canvasRef.current;
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current[e.key] = true;
       socket.emit("update", keysPressed.current, mousePos.current);
@@ -69,14 +70,15 @@ function App() {
 
     const goobers = (pass: string) => {
       socket.emit(pass);
+      return "you are a goober!";
     }
     (window as any).goobers = goobers;
 
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("resize", resizeCanvas);
+    canvas.addEventListener("keydown", handleKeyDown);
+    canvas.addEventListener("keyup", handleKeyUp);
+    canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
     socket.on("init", (CANVAS_DIMENSIONS: any, _SIZE_FACTOR: number, PLAYER_COLOR: string) => {
@@ -138,13 +140,17 @@ function App() {
       setIsDead(true);
     });
 
+    socket.on("cheatEnabled", (cheat: string) => {
+      console.log("cheat enabled: ", cheat);
+    })
+
     return () => {
       socket.off("update");
       socket.disconnect();
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("resize", resizeCanvas);
+      canvas.removeEventListener("keydown", handleKeyDown);
+      canvas.removeEventListener("keyup", handleKeyUp);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+      canvas.removeEventListener("resize", resizeCanvas);
       delete (window as any).goobers;
     };
 
@@ -197,18 +203,23 @@ function App() {
           <button>Submit</button>
         </form>
       </div>
-      <canvas ref={canvasRef} className="battlefield" tabIndex={0} />
-      {isDead && <button className="respawn-button" onClick={() => {
-        setIsDead(false);
-        const socket = socketRef.current;
-        socket.emit("respawn");
-      }}>Respawn</button>}
-      <div className="leaderboard">
-        <h2>Leaderboard (score = total kills - total deaths)</h2>
-        <ul className="leaderboard-list">
-          {leaderboardEntries}
-        </ul>
-      </div>
+
+      <section className="main-content">
+        <div className="battlefield-respawn">
+          <canvas ref={canvasRef} className="battlefield" tabIndex={0} />
+          {isDead && <button className="respawn-button" onClick={() => {
+            setIsDead(false);
+            const socket = socketRef.current;
+            socket.emit("respawn");
+          }}>Respawn</button>}
+        </div>
+        <div className="leaderboard">
+          <h2>Leaderboard (score = total kills - total deaths)</h2>
+          <ul className="leaderboard-list">
+            {leaderboardEntries}
+          </ul>
+        </div>
+      </section>
     </main>
   )
 }
