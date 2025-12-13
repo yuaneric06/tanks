@@ -15,8 +15,8 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    // origin: "https://yuaneric06.github.io",
+    // origin: "http://localhost:5173",
+    origin: "https://yuaneric06.github.io",
     methods: ["GET", "POST"]
   }
 });
