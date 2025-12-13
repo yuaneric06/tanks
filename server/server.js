@@ -15,8 +15,8 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    // origin: "http://localhost:5173",
-    origin: "https://yuaneric06.github.io",
+    origin: "http://localhost:5173",
+    // origin: "https://yuaneric06.github.io",
     methods: ["GET", "POST"]
   }
 });
@@ -164,7 +164,7 @@ setInterval(() => {
       player.shotCooldown++;
     }
 
-    if (keys[" "] && player.health > 0 && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
+    if ((keys[" "] || keys["mouse"]) && player.health > 0 && (player.shotCooldown >= SHOT_COOLDOWN || playersWithNoShellCooldown.has(player.id))) {
       player.shotCooldown = 0;
       shells.push({ x: player.x, y: player.y, angle: player.barrelAngle, shotFrom: player.id });
     }

@@ -18,8 +18,8 @@ function App() {
   let SIZE_FACTOR = 1;
 
   useEffect(() => {
-    // socketRef.current = io("http://localhost:3000");
-    socketRef.current = io("https://tanks-jva2.onrender.com/");
+    socketRef.current = io("http://localhost:3000");
+    // socketRef.current = io("https://tanks-jva2.onrender.com/");
     const socket = socketRef.current;
     const canvas = canvasRef.current;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -45,6 +45,16 @@ function App() {
       const canvasY = cssY * (canvas.height / rect.height);
 
       mousePos.current = { x: canvasX, y: canvasY };
+      socket.emit("update", keysPressed.current, mousePos.current);
+    }
+
+    const handleMouseDown = () => {
+      keysPressed.current['mouse'] = true;
+      socket.emit("update", keysPressed.current, mousePos.current);
+    }
+
+    const handleMouseUp = () => {
+      keysPressed.current['mouse'] = false;
       socket.emit("update", keysPressed.current, mousePos.current);
     }
 
@@ -78,6 +88,8 @@ function App() {
     canvas.addEventListener("keydown", handleKeyDown);
     canvas.addEventListener("keyup", handleKeyUp);
     canvas.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mousedown", handleMouseDown);
+    canvas.addEventListener("mouseup", handleMouseUp);
     canvas.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
@@ -191,7 +203,7 @@ function App() {
     <main>
       {!connected && renderLoadingScreen()}
       <h1 className="title">Tanks</h1>
-      <p>Control your tank, shoot the enemy! WASD to move, mouse to aim, and space to shoot</p>
+      <p>Control your tank, shoot the enemy! WASD to move, mouse to aim, and space / click to shoot</p>
       <div className="colorAndName">
         <div className="color">
           <p>Your tank color: </p>
